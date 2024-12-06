@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Interativo</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.plot.ly/plotly-2.24.2.min.js"></script>
+</head>
+<body>
+    <h1>Dashboard Interativo</h1>
+
+    <form method="get" action="/">
+        <label for="slider">Filtrar por intervalo de valores:</label><br>
+        <input type="range" id="min_val" name="min_val" min="0" max="500" value="{{ min_val }}" step="10" oninput="updateRange()">
+        <input type="range" id="max_val" name="max_val" min="0" max="500" value="{{ max_val }}" step="10" oninput="updateRange()"><br>
+        <p>Intervalo: <span id="range_display">{{ min_val }} - {{ max_val }}</span></p>
+        <button type="submit">Filtrar</button>
+    </form>
+
+    <h2>Tabela de Pedidos</h2>
+    <table border="1">
+        <tr>
+            <th>Semana</th>
+            <th>Pedidos</th>
+        </tr>
+        {% for row in data %}
+        <tr>
+            <td>{{ row.Semana }}</td>
+            <td>
+                {% for pedido in row.Pedidos %}
+                <a href="{{ url_for('details', pedido=pedido) }}">{{ pedido }}</a><br>
+                {% endfor %}
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <script>
+        function updateRange() {
+            const minVal = document.getElementById('min_val').value;
+            const maxVal = document.getElementById('max_val').value;
+            document.getElementById('range_display').innerText = `${minVal} - ${maxVal}`;
+        }
+    </script>
+</body>
+</html>
