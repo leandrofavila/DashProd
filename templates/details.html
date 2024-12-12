@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <title>Dashboard</title>
+    <title>Detalhes</title>
 </head>
 <body>
-    <h1>Resumo de Máquinas para o carregamento: {{carregamento}}</h1>
-    <h2>{{desc_carregamento}}</h2>
-    <table class="table" id="summary_table">
-        {{ table_summary|safe }}
+    <h1>Detalhes da Máquina: {{ machine }}</h1>
+    <a href="/">Voltar</a>
+    <table class="table" id="detail_table">
+        {{ table_detail|safe }}
     </table>
 </body>
 </html>

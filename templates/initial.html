@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard</title>
+</head>
+<body>
+    <h1>Resumo do Dashboard</h1>
+    <div id="slider">
+        <!-- O Dash insere o slider aqui -->
+    </div>
+    <table border="1">
+        <thead>
+            <tr>
+                <th>Carregamento</th>
+                <th>Data</th>
+                <th>Local Prod</th>
+                <th>Em Aberto</th>
+                <th>Encerradas</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in df_car_abertos %}
+            <tr>
+                <td>{{ row['CARREGAMENTO']|safe }}</td>
+                <td>{{ row['DATA'] }}</td>
+                <td>{{ row['LOCAL_PROD'] }}</td>
+                <td>{{ row['EM_ABERTO'] }}</td>
+                <td>{{ row['ENCERRADAS'] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

@@ -11,7 +11,7 @@ class PLANEJAMENTO:
     def get_df_pl_semanal(self):
         url = self.url
         df = pd.read_csv(url, names=[
-            "CLIENTE", "PEDIDO", "PROJETO", "DESCRIÇÃO DO EQUIPAMENTO", "DATA", "FRETE", "TIPO DE VEICULO", "MOTORISTA",
+            "CLIENTE", "PEDIDO", "PROJETO", "DESCRIÇÃO DO EQUIPAMENTO", "DATA_", "FRETE", "TIPO DE VEICULO", "MOTORISTA",
             "ENTREGA", "CARREGAMENTO", "SUPRIMENTOS", "PRAZO CONTRATO", "OBSERVAÇÕES GERAIS", "1", "2", "3", "4"
             , "5", "6", "7", "8"
         ])
