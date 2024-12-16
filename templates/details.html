@@ -5,12 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>Detalhes</title>
+    <style>
+        .error-message {
+            color: blue;
+            font-weight: bold;
+            font-size: 24px;
+        }
+    </style>
 </head>
 <body>
-    <h1>Detalhes da Máquina: {{ machine }}</h1>
-    <a href="/">Voltar</a>
-    <table class="table" id="detail_table">
+    {% if message %}
+        <p class="error-message">{{ message }}</p>
+        <script>
+            setTimeout(() => {
+                window.history.back(); // Voltar para a página anterior
+            }, 1000); // 1 segundo antes de redirecionar
+        </script>
+    {% else %}
+        <h1>Detalhes para a máquina: {{ machine }}</h1>
         {{ table_detail|safe }}
-    </table>
+    {% endif %}
 </body>
 </html>

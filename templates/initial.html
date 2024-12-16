@@ -2,34 +2,21 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Inicio</title>
 </head>
+<style>
+    .table span[title="PRONTO"] {
+        cursor: pointer;
+    }
+    .table span[title="PRONTO"]:hover {
+        font-weight: bold;
+    }
+</style>
 <body>
-    <h1>Resumo do Dashboard</h1>
-    <div id="slider">
-        <!-- O Dash insere o slider aqui -->
-    </div>
-    <table border="1">
-        <thead>
-            <tr>
-                <th>Carregamento</th>
-                <th>Data</th>
-                <th>Local Prod</th>
-                <th>Em Aberto</th>
-                <th>Encerradas</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in df_car_abertos %}
-            <tr>
-                <td>{{ row['CARREGAMENTO']|safe }}</td>
-                <td>{{ row['DATA'] }}</td>
-                <td>{{ row['LOCAL_PROD'] }}</td>
-                <td>{{ row['EM_ABERTO'] }}</td>
-                <td>{{ row['ENCERRADAS'] }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
+    <table class="table" id="summary_table">
+        {{ table_summary|safe }}
     </table>
 </body>
 </html>

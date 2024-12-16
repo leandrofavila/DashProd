@@ -1,8 +1,5 @@
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, redirect
 import pandas as pd
-from datetime import datetime
-from dash import dcc, html, Output, Input, Dash, dash
-from dash.dash_table import DataTable
 from ConDB import BD
 from PlanejamentoSemanal import PLANEJAMENTO
 
@@ -12,94 +9,65 @@ server = Flask(__name__)
 bd = BD()
 pl_semanal = PLANEJAMENTO()
 
-#Adicionando a data de entrega do planejamento semanal a cada carregamento com sit 'A' do Focco
-df_car_abertos = bd.car_abertos()
-df_pla_semanal = pl_semanal.get_df_pl_semanal()
-df_car_abertos = pd.merge(df_car_abertos, df_pla_semanal, on='CARREGAMENTO', how='left')
-df_car_abertos = df_car_abertos.sort_values(by='DATA_', ascending=False)
-df_car_abertos['DATA_'] = pd.to_datetime(df_car_abertos['DATA_'], format='%d/%m/%Y', errors='coerce')
-
-
-app = Dash(__name__, server=server, url_base_pathname='/dashboard/')
-
-app.layout = html.Div([
-    dcc.Slider(
-        1, 12, 1,
-        marks={i: {'label': month} for i, month in enumerate(
-            ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'], start=1)},
-        id='meu_slider',
-        value=datetime.now().month,
-        included=False
-    ),
-    html.Div(id='output_table')
-])
-
-
-@app.callback(
-    Output('output_table', 'children'),
-    [Input('meu_slider', 'value')]
-)
-def update_table(selected_month):
-    filtered_df = df_car_abertos[df_car_abertos['DATA_'].dt.month == selected_month]
-    filtered_df['DATA'] = filtered_df['DATA_'].dt.strftime('%d/%m/%Y')
-
-    # Cria links na coluna 'CARREGAMENTO'
-    filtered_df.loc[:, 'CARREGAMENTO'] = filtered_df['CARREGAMENTO'].apply(
-        lambda x: f'<a href="/dashboard/{x}" target="_self" style="text-decoration: none;">{x}</a>'
-    )
-
-    filtered_df.drop('DATA_', axis=1, inplace=True)
-    return dash.dash_table.DataTable(
-        columns=[{"name": col, "id": col, "presentation": "markdown" if col == 'CARREGAMENTO' else None}
-                 for col in filtered_df.columns],
-        data=filtered_df.to_dict('records'),
-        style_table={'overflowX': 'auto'},
-        style_cell={'textAlign': 'left'},
-        markdown_options={"html": True}
-    )
-
 
 @server.route('/')
 def index():
-    return redirect('/dashboard/')
+    return redirect('/initial/')
+
+
+def style_cells(value):
+    if isinstance(value, str) and value.startswith("0 / "):
+        return f'<div style="background-color: lightgreen;" title="PRONTO">FINALIZADO</div>'
+    return value
+
+
+@server.route('/initial/')
+def update_table():
+    # Adicionando a data de entrega do planejamento semanal a cada carregamento com sit 'A' do Focco
+    df_car_abertos = bd.car_abertos()
+    df_pla_semanal = pl_semanal.get_df_pl_semanal()
+    df_car_abertos = pd.merge(df_car_abertos, df_pla_semanal, on='CARREGAMENTO', how='left')
+    df_car_abertos = df_car_abertos.sort_values(by='DATA_', ascending=False)
+    try:
+        df_car_abertos_copy = df_car_abertos.copy()
+        df_car_abertos_copy['CARREGAMENTO'] = df_car_abertos_copy['CARREGAMENTO'].apply(
+            lambda x: f'<a href="/dashboard/{x}" target="_self" style="text-decoration: none;">{x}</a>'
+        )
+
+        # Converter para HTML
+        table_html = df_car_abertos_copy.to_html(
+            classes="table",
+            index=False,
+            escape=False,
+            formatters={col: style_cells for col in df_car_abertos_copy.columns},
+        )
+        return render_template("initial.html", table_summary=table_html)
+    except Exception as e:
+        return f"Erro ao processar os dados: {str(e)}", 500
+
+
 
 
 @server.route('/dashboard/<carregamento>')
 def dashboard(carregamento):
     global car_data
     car_data = bd.car_data(str(carregamento))
-    desc_carregamento = car_data['CAR_DESC'].iloc[0]
-    car_data = car_data.drop('CAR_DESC', axis=1)
+    global desc_carregamento
+    desc_carregamento = bd.car_desc(str(carregamento))
 
-    summary = (
-        car_data.groupby("MAQUINA")["TIPO_ORDEM"]
-        .value_counts()
-        .unstack(fill_value=0)
-        .reset_index()
+
+    #add link para as maquinas
+    car_data['Maquina'] = car_data['Maquina'].apply(
+        lambda x: f'<a href="/details/{x}/{carregamento}" target="_self" style="text-decoration: none;">{x}</a>'
     )
-
-
-    summary['Abertas / Total'] = ''
-
-    def calcular_tipo_ordem_count(row):
-        ofa = int(row['OFA']) if 'OFA' in row else 0
-        ofe = int(row['OFE']) if 'OFE' in row else 0
-        total = ofa + ofe
-        return f"{ofa}/{total}"
-
-    summary['Abertas / Total'] = summary.apply(calcular_tipo_ordem_count, axis=1)
-
-
-    summary['MAQUINA'] = summary['MAQUINA'].apply(
-        lambda x: f'<a href="/details/{x}" target="_self" style="text-decoration: none;">{x}</a>'
-    )
-    summary = summary.rename_axis(None, axis=1)
-    summary = summary.drop(columns=["TIPO_ORDEM"], errors='ignore')
-
 
     # Renderizar a tabela resumida
-    summary_table = summary[["MAQUINA", "Abertas / Total"]].to_html(
-        classes="table", index=False, escape=False
+    car_data = car_data.astype(str)
+    summary_table = car_data.to_html(
+        classes="table",
+        index=False,
+        escape=False,
+        formatters={col: style_cells for col in car_data.columns}
     )
 
     return render_template(
@@ -110,16 +78,30 @@ def dashboard(carregamento):
     )
 
 
-@server.route('/details/<machine>')
-def details(machine):
-    filtered_df = car_data[car_data["MAQUINA"] == machine]
-    filtered_df.drop('MAQUINA', axis=1, inplace=True)
+@server.route('/details/<machine>/<carregamento>')
+def details(machine, carregamento):
+    print(machine, carregamento)
+    filtered_df = bd.car_details(machine, carregamento)
+
+    if filtered_df.empty:
+        return render_template(
+            "details.html",
+            machine=machine,
+            table_detail=None,
+            message="Nenhum valor encontrado para essa máquina."
+        )
 
     detail_table = filtered_df.to_html(classes="table", index=False, escape=False)
     return render_template(
-        "details.html", machine=machine, table_detail=detail_table
+        "details.html",
+        machine=machine,
+        table_detail=detail_table,
+        message=None
     )
 
 
 if __name__ == '__main__':
-    server.run(debug=True)
+    try:
+        server.run(host='0.0.0.0', port=8000)
+    except Exception as err:
+        print(err)

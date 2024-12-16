@@ -112,8 +112,9 @@ class BD:
         ])
         car_abertos['CARREGAMENTO'] = car_abertos['CARREGAMENTO'].astype(str)
 
-        #pivotando df
-        car_abertos["PROPORCAO"] = car_abertos["EM_ABERTO"].astype(str) + " / " + (car_abertos["EM_ABERTO"] + car_abertos["ENCERRADAS"]).astype(str)
+        # pivotando df
+        car_abertos["PROPORCAO"] = car_abertos["EM_ABERTO"].astype(str) + " / " + (
+                car_abertos["EM_ABERTO"] + car_abertos["ENCERRADAS"]).astype(str)
 
         # Pivotando os dados para transformar LOCAL_PROD em colunas
         car_abertos = car_abertos.pivot_table(
@@ -132,37 +133,115 @@ class BD:
             'CARREGAMENTO', 'DESCRICAO', 'PREPARACAO', 'USINAGEM', 'SOLDAGEM', 'PREPARACAO-SUPERFICIE', 'PINTURA',
             'PRE-MONTAGEM', 'ALMOX'
         ]]
-        #print(car_abertos.to_string())
-        #quit()
+        # print(car_abertos.to_string())
+        # quit()
         return car_abertos
 
     def car_data(self, carregamento):
         cur = self.conexao.conectar()
         cur.execute(
-            r"SELECT  "
-            r"    CAR.DESCRICAO, "
-            r"    MAQ.DESCRICAO, "
+            r"SELECT DISTINCT  "
+            r"    TPL.COD_ITEM,  "
             r"    TOR.NUM_ORDEM, "
-            r"    TOR.QTDE, "
-            r"    TOR.TIPO_ORDEM, "
-            r"    MASC.ID, "
-            r"    MASC.MASCARA "
-            r"FROM FOCCO3I.TORDENS TOR "
-            r"INNER JOIN FOCCO3I.TSRENG_ORDENS_VINC_CAR VIN       ON VIN.ORDEM_ID = TOR.ID "
-            r"INNER JOIN FOCCO3I.TSRENGENHARIA_CARREGAMENTOS CAR  ON CAR.ID = VIN.CARERGAM_ID "
-            r"INNER JOIN FOCCO3I.TORDENS_ROT ROT                  ON TOR.ID = ROT.ORDEM_ID "
-            r"INNER JOIN FOCCO3I.TORD_ROT_FAB_MAQ FAB             ON ROT.ID = FAB.TORDEN_ROT_ID "
-            r"INNER JOIN FOCCO3I.TMAQUINAS MAQ                    ON FAB.MAQUINA_ID = MAQ.ID "
-            r"LEFT JOIN FOCCO3I.TMASC_ITEM MASC                   ON MASC.ID = TOR.TMASC_ITEM_ID "
-            r"WHERE CAR.CARREGAMENTO IN (" + carregamento + ") "
+            r"    TOR.QTDE,  "
+            r"    TIT.DESC_TECNICA, "
+            r"    MAQ.DESCRICAO, "
+            r"    COUNT(CASE WHEN TOR.TIPO_ORDEM IN ('OFA', 'OFM') THEN 1 END) AS EM_ABERTO, "
+            r"    COUNT(CASE WHEN TOR.TIPO_ORDEM = 'OFE' THEN 1 END) AS ENCERRADAS "
+            r"FROM FOCCO3I.TITENS_PLANEJAMENTO TPL "
+            r"INNER JOIN FOCCO3I.TITENS_EMPR EMP      ON TPL.ITEMPR_ID = EMP.ID "
+            r"INNER JOIN FOCCO3I.TITENS TIT           ON EMP.ITEM_ID = TIT.ID  "
+            r"INNER JOIN FOCCO3I.TORDENS TOR          ON TPL.ID = TOR.ITPL_ID "
+            r"INNER JOIN FOCCO3I.TDEMANDAS TDE        ON TOR.ID = TDE.ORDEM_ID "
+            r"INNER JOIN FOCCO3I.TORDENS_ROT ROT      ON TOR.ID = ROT.ORDEM_ID "
+            r"INNER JOIN FOCCO3I.TORD_ROT_FAB_MAQ FAB ON ROT.ID = FAB.TORDEN_ROT_ID "
+            r"INNER JOIN FOCCO3I.TMAQUINAS MAQ        ON FAB.MAQUINA_ID = MAQ.ID "
+            r"WHERE TOR.ID IN( "
+            r"                SELECT TOR.ID "
+            r"                FROM FOCCO3I.TORDENS TOR "
+            r"                INNER JOIN FOCCO3I.TSRENG_ORDENS_VINC_CAR VINC      ON TOR.ID = VINC.ORDEM_ID " 
+            r"                INNER JOIN FOCCO3I.TSRENGENHARIA_CARREGAMENTOS CAR  ON VINC.CARERGAM_ID = CAR.ID " 
+            r"                WHERE CAR.CARREGAMENTO IN (" + carregamento + ") " 
+            r"                ) " 
+            r"GROUP BY TPL.COD_ITEM,  " 
+            r"TOR.NUM_ORDEM, " 
+            r"TOR.QTDE,  "
+            r"TIT.DESC_TECNICA, "
+            r"MAQ.DESCRICAO   "
         )
         car_data = cur.fetchall()
-        car_data = pd.DataFrame(car_data, columns=['CAR_DESC', 'MAQUINA', 'NUM_ORDEM', 'QTDE', 'TIPO_ORDEM', 'MASC', 'MASC_DESC'])
-        car_data.dropna(subset=['QTDE', 'MASC'], inplace=True)
-        car_data[['QTDE', 'MASC']] = car_data[['QTDE', 'MASC']].astype('int64')
+        car_data = pd.DataFrame(car_data, columns=['COD_ITEM', 'NUM_ORDEM', 'QTDE', 'DESC_TECNICA', 'MAQ',
+                                                   'EM_ABERTO', 'ENCERRADAS'])
+        car_data[['NUM_ORDEM', 'QTDE', 'COD_ITEM', 'EM_ABERTO', 'ENCERRADAS']] = car_data[[
+            'NUM_ORDEM', 'QTDE', 'COD_ITEM', 'EM_ABERTO', 'ENCERRADAS'
+        ]].astype('int64')
+
+        car_data = car_data.groupby(['MAQ']).agg(
+            QTDE=('QTDE', 'sum'),
+            TOTAL_ORDENS=('NUM_ORDEM', 'count'),
+            EM_ABERTO=('EM_ABERTO', 'sum'),
+            ENCERRADAS=('ENCERRADAS', 'sum')
+        ).reset_index()
+
+        car_data["PROPORCAO"] = car_data["EM_ABERTO"].astype(str) + " / " + (
+                car_data["EM_ABERTO"] + car_data["ENCERRADAS"]).astype(str)
+
+        car_data = car_data.reset_index()
+        car_data = car_data.sort_values(by='MAQ', ascending=False)
+        car_data.drop(['EM_ABERTO', 'ENCERRADAS', 'index'], axis=1, inplace=True)
+        car_data = car_data.rename(columns={
+            'MAQ': 'Maquina', 'QTDE': 'Qtd. Peças', 'TOTAL_ORDENS': 'Qtd. Ordens', 'PROPORCAO': 'Abertas / Total'
+        }).reset_index(drop=True)
+        return car_data
+
+
+    def car_desc(self, carregamento):
+        cur = self.conexao.conectar()
+        cur.execute(
+            r"SELECT CAR.DESCRICAO FROM FOCCO3I.TSRENGENHARIA_CARREGAMENTOS CAR "
+            r"WHERE CAR.CARREGAMENTO IN (" + carregamento + ")  "
+        )
+        car_desc = cur.fetchall()[0][0]
+        return car_desc
+
+    def car_details(self, machine, carregamento):
+        cur = self.conexao.conectar()
+
+        cur.execute(
+            """
+            SELECT DISTINCT 
+                TPL.COD_ITEM,  
+                TOR.NUM_ORDEM, 
+                TOR.QTDE,  
+                TIT.DESC_TECNICA 
+            FROM FOCCO3I.TITENS_PLANEJAMENTO TPL
+            INNER JOIN FOCCO3I.TITENS_EMPR EMP      ON TPL.ITEMPR_ID = EMP.ID
+            INNER JOIN FOCCO3I.TITENS TIT           ON EMP.ITEM_ID = TIT.ID  
+            INNER JOIN FOCCO3I.TORDENS TOR          ON TPL.ID = TOR.ITPL_ID
+            INNER JOIN FOCCO3I.TDEMANDAS TDE        ON TOR.ID = TDE.ORDEM_ID
+            INNER JOIN FOCCO3I.TORDENS_ROT ROT      ON TOR.ID = ROT.ORDEM_ID
+            INNER JOIN FOCCO3I.TORD_ROT_FAB_MAQ FAB ON ROT.ID = FAB.TORDEN_ROT_ID
+            INNER JOIN FOCCO3I.TMAQUINAS MAQ        ON FAB.MAQUINA_ID = MAQ.ID
+            WHERE TOR.ID IN (
+                SELECT TOR.ID
+                FROM FOCCO3I.TORDENS TOR
+                INNER JOIN FOCCO3I.TSRENG_ORDENS_VINC_CAR VINC      ON TOR.ID = VINC.ORDEM_ID
+                INNER JOIN FOCCO3I.TSRENGENHARIA_CARREGAMENTOS CAR  ON VINC.CARERGAM_ID = CAR.ID
+                WHERE CAR.CARREGAMENTO IN (:carregamento)
+            )
+            AND TOR.TIPO_ORDEM IN ('OFA', 'OFM', 'OFE')  
+            AND MAQ.DESCRICAO IN (:machine)
+            """,
+            {"carregamento": carregamento, "machine": machine}
+        )
+        car_data = cur.fetchall()
+        car_data = pd.DataFrame(car_data, columns=['COD_ITEM', 'NUM_ORDEM', 'QTDE', 'DESC_TECNICA'])
+        car_data[['COD_ITEM', 'NUM_ORDEM', 'QTDE']] = car_data[['COD_ITEM', 'NUM_ORDEM', 'QTDE']].astype('int64')
+
         return car_data
 
 
 if __name__ == "__main__":
     db = BD()
-    print(db.car_abertos().to_string())
+    print(db.car_details('MIG', '448700'))
+    # print(db.car_abertos().to_string())
