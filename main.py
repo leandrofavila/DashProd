@@ -1,10 +1,11 @@
-from flask import Flask, render_template, redirect
+from flask import Flask, render_template, redirect, url_for, send_file
 import pandas as pd
 from ConDB import BD
 from PlanejamentoSemanal import PLANEJAMENTO
+import fitz
 
 
-server = Flask(__name__)
+server = Flask(__name__, static_folder='static')
 
 bd = BD()
 pl_semanal = PLANEJAMENTO()
@@ -13,6 +14,35 @@ pl_semanal = PLANEJAMENTO()
 @server.route('/')
 def index():
     return redirect('/initial/')
+
+
+def generate_pdf_thumbnail(pdf_path, output_path):
+    pdf_document = fitz.open(pdf_path)
+    page = pdf_document[0]  # Seleciona a primeira página
+    pix = page.get_pixmap()  # Renderiza a página
+    pix.save(output_path)  # Salva como imagem
+    pdf_document.close()
+
+
+def style_pdf_cells(value):
+    try:
+        value = str(value)
+        pdf_thumbnail = fr"C:\Users\pcp03\PycharmProjects\DashProd\static\pdf_thumbnails\{value}.png"
+        pdf_path = f"T:\\06_Desenhos_PDF\\{value}.pdf"
+        generate_pdf_thumbnail(pdf_path, pdf_thumbnail)
+        url_png = url_for('static', filename=fr'pdf_thumbnails/{value}.png')
+        return f'''
+            <figure>
+                <a href="{url_png}" target="_blank" style="text-decoration: none; color: inherit;">
+                    <img src="{url_png}" alt="Miniatura do PDF" style="width: 100%; height: auto;">
+                </a>
+                <figcaption>{value}</figcaption>
+            </figure>
+        '''
+    except Exception as e:
+        print(f"Error processing value {value}: {e}")
+        return value
+
 
 
 def style_cells(value):
@@ -46,8 +76,6 @@ def update_table():
         return f"Erro ao processar os dados: {str(e)}", 500
 
 
-
-
 @server.route('/dashboard/<carregamento>')
 def dashboard(carregamento):
     global car_data
@@ -55,12 +83,10 @@ def dashboard(carregamento):
     global desc_carregamento
     desc_carregamento = bd.car_desc(str(carregamento))
 
-
     #add link para as maquinas
     car_data['Maquina'] = car_data['Maquina'].apply(
         lambda x: f'<a href="/details/{x}/{carregamento}" target="_self" style="text-decoration: none;">{x}</a>'
     )
-
     # Renderizar a tabela resumida
     car_data = car_data.astype(str)
     summary_table = car_data.to_html(
@@ -80,7 +106,6 @@ def dashboard(carregamento):
 
 @server.route('/details/<machine>/<carregamento>')
 def details(machine, carregamento):
-    print(machine, carregamento)
     filtered_df = bd.car_details(machine, carregamento)
 
     if filtered_df.empty:
@@ -91,7 +116,12 @@ def details(machine, carregamento):
             message="Nenhum valor encontrado para essa máquina."
         )
 
-    detail_table = filtered_df.to_html(classes="table", index=False, escape=False)
+    detail_table = filtered_df.to_html(
+        classes="table",
+        index=False,
+        escape=False,
+        formatters={'COD_ITEM': style_pdf_cells}
+    )
     return render_template(
         "details.html",
         machine=machine,

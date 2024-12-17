@@ -4,15 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
     <title>Detalhes</title>
-    <style>
-        .error-message {
-            color: blue;
-            font-weight: bold;
-            font-size: 24px;
-        }
-    </style>
 </head>
+<style>
+    /* Estilo do elemento pai */
+    #miniatura {
+        background-color: red;
+        position: relative; /* Necessário para o posicionamento absoluto do tooltip */
+        display: inline-block;
+        padding: 10px; /* Adicionando algum espaço ao redor */
+    }
+
+    /* Alteração do estilo do pai ao passar o mouse */
+    #miniatura:hover{
+        background-color: green;
+        visibility: visible; /* Torna visível a miniatura */
+        opacity: 1; /* Torna a miniatura opaca */
+    }
+
+
+    /* Tooltip (miniatura) escondida por padrão */
+    .tooltip {
+        position: absolute; /* Posiciona a miniatura */
+        bottom: 100%; /* Coloca a miniatura acima do elemento pai */
+        left: 50%;
+        transform: translateX(-50%);
+        width: 200px; /* Largura da miniatura */
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        transition: opacity 0.3s ease, visibility 0.3s ease; /* Animação suave */
+    }
+
+
+</style>
 <body>
     {% if message %}
         <p class="error-message">{{ message }}</p>

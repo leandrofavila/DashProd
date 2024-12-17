@@ -1,4 +1,5 @@
 db_config.json
+pdf_thumbnails
 .env
 __pycache__/
 *.pyc

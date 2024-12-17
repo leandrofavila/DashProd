@@ -229,7 +229,7 @@ class BD:
                 INNER JOIN FOCCO3I.TSRENGENHARIA_CARREGAMENTOS CAR  ON VINC.CARERGAM_ID = CAR.ID
                 WHERE CAR.CARREGAMENTO IN (:carregamento)
             )
-            AND TOR.TIPO_ORDEM IN ('OFA', 'OFM', 'OFE')  
+            AND TOR.TIPO_ORDEM IN ('OFA', 'OFM')  
             AND MAQ.DESCRICAO IN (:machine)
             """,
             {"carregamento": carregamento, "machine": machine}

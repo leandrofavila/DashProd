@@ -153,3 +153,9 @@ h1 {
 .table th {
     background-color: #f2f2f2;
 }
+
+
+.error-message {
+    color: red;
+    font-weight: bold;
+    font-size: 24px;
