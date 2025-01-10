@@ -18,5 +18,21 @@
     <table class="table" id="summary_table">
         {{ table_summary|safe }}
     </table>
+    <script>
+    function sendData(header, rowValue) {
+        // Envia os dados usando fetch para evitar reload de página
+        fetch("/handle_click", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ header: header, row_value: rowValue }),
+        }).then(response => {
+            if (response.ok) {
+                console.log("Data sent successfully!");
+            } else {
+                console.error("Failed to send data.");
+            }
+        });
+    }
+</script>
 </body>
 </html>

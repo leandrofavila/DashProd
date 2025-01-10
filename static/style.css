@@ -1,12 +1,13 @@
 body {
     font-family: Arial, sans-serif;
     margin: 20px;
-    background-color: #f4f4f9;
-    color: #333;
+    background-color: #232326;
+    color: white;
+    padding: 0;
 }
 
 h1, h2 {
-    color: #2c3e50;
+    color: #fff;
     text-align: center;
 }
 
@@ -20,37 +21,35 @@ label {
     color: #34495e;
 }
 
-p {
-    font-size: 16px;
-}
-
-/* Estilo da tabela */
-table {
-    width: 80%;
-    margin: 0 auto;
-    border-collapse: collapse;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
 
 table th, table td {
-    border: 1px solid #ddd;
+
     padding: 12px;
     text-align: center;
 }
 
-table th {
-    background-color: #2980b9;
+.table th {
+    background-color: #000;
     color: white;
     font-weight: bold;
 }
 
-table tr:nth-child(even) {
-    background-color: #f9f9f9;
+table tr:nth-child(odd) {
+    background-color: #015958;
+}
+
+table tr {
+    background-color: #023535;
+    transition: background-color 0.5s;
 }
 
 table tr:hover {
-    background-color: #f1f1f1;
+    background-color: #46464a;
 }
+
+
+
+
 
 a {
     text-decoration: none;
@@ -63,40 +62,65 @@ a:hover {
     text-decoration: underline;
 }
 
-body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
-    padding: 0;
-}
-
 .table {
     width: 100%;
     border-collapse: collapse;
     margin: 20px auto;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.table th, .table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-    text-align: left;
-}
 
-.table th {
-    background-color: #f2f2f2;
-}
 
 .error-message {
     color: red;
     font-weight: bold;
     font-size: 24px;
+    }
 
-/*aponta para classe miniatura do pdf*/
-.miniatura-img {
-    width: 20% !important;
-    visibility: visible !important;
-    opacity: 1 !important;
+/*stilo para os cards com as miniaturas dos pdfs*/
+.card {
+    border: 1px solid #ccc; /* Define uma borda cinza clara ao redor do card */
+    border-radius: 8px; /* Adiciona cantos arredondados ao card */
+    width: fix-content; /* Define a largura total do card */
+    margin: 10px; /* Adiciona espaço externo ao redor do card */
+    display: inline-block; /* Permite que vários cards fiquem lado a lado */
+    vertical-align: top; /* Alinha os cards pelo topo caso estejam lado a lado */
 }
 
-div.miniatura img {
-    width: 20%;
+
+.card-image {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 380px;
+}
+
+
+.card-image img {
+    width: fit-content;
+    height: auto; /* Mantém a proporção da imagem */
+    max-height: 33.33vh; /* Garante que a altura também se adapte à orientação paisagem */
+    object-fit: contain; /* Garante que a imagem se encaixe dentro do contêiner */
+    display: block; /* Remove possíveis espaçamentos extras */
+    transform: rotate(0deg); /* Apenas rotaciona se necessário */
+    border-radius: 10px; /* Adiciona cantos arredondados à imagem */
+    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3); /* Adiciona uma sombra leve */
+}
+
+.card-content {
+    padding: 10px; /* Adiciona espaçamento interno ao conteúdo do card */
+}
+.cards-container {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    align-items: center;
+    height: 380px;
+}
+.row {
+    margin-bottom: 5px; /* Adiciona espaço entre as linhas de conteúdo */
+}
+
+.label {
+    font-weight: bold; /* Deixa o texto em negrito para destacar */
 }

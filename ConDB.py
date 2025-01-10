@@ -40,7 +40,10 @@ class BD:
         cur = self.conexao.conectar()
         cur.execute(
             r"SELECT CAR.CARREGAMENTO, CAR.DESCRICAO,  "
-            r"    COUNT(CASE WHEN TOR.TIPO_ORDEM IN ('OFA', 'OFM') THEN 1 END) AS EM_ABERTO, "
+            r"    COUNT(CASE WHEN NOT EXISTS( "
+            r"                            SELECT MOV.ID FROM FOCCO3I.TORDENS_MOVTO MOV "
+            r"                            WHERE MOV.TORDEN_ROT_ID = ROT.ID "
+            r"                            ) THEN 1 END) AS EM_ABERTO, "
             r"    COUNT(CASE WHEN TOR.TIPO_ORDEM = 'OFE' THEN 1 END) AS ENCERRADAS, "
             r"CASE "
             r"    WHEN MAQ.DESCRICAO LIKE '%SERRA-FITA%'      THEN 'PREPARACAO' "
@@ -144,7 +147,10 @@ class BD:
             r"    MAQ.DESCRICAO, "
             r"    COUNT(TOR.NUM_ORDEM) AS TOT_ORDENS, "
             r"    SUM(TOR.QTDE) TOT_PECAS, "
-            r"    COUNT(CASE WHEN TOR.TIPO_ORDEM IN ('OFA', 'OFM') THEN 1 END) AS EM_ABERTO, "
+            r"    COUNT(CASE WHEN NOT EXISTS( "
+            r"                            SELECT MOV.ID FROM FOCCO3I.TORDENS_MOVTO MOV "
+            r"                            WHERE MOV.TORDEN_ROT_ID = ROT.ID "
+            r"                            ) THEN 1 END) AS EM_ABERTO, "
             r"    COUNT(CASE WHEN TOR.TIPO_ORDEM = 'OFE' THEN 1 END) AS ENCERRADAS "
             r"FROM FOCCO3I.TORDENS TOR "
             r"INNER JOIN FOCCO3I.TORDENS_ROT ROT                  ON TOR.ID = ROT.ORDEM_ID "
