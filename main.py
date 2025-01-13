@@ -46,7 +46,7 @@ def style_pdf_cells(value):
 
 def style_cells(value):
     if isinstance(value, str) and value.startswith("0 / "):
-        return f'<div style="background-color: green;" title="PRONTO">FINALIZADO</div>'
+        return f'<div style="background-color: green; border-radius: 6px;" title="PRONTO">FINALIZADO</div>'
     return value
 
 
