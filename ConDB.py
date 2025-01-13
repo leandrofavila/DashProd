@@ -131,7 +131,7 @@ class BD:
         car_abertos = car_abertos.reset_index()
         car_abertos = car_abertos.sort_values(by='CARREGAMENTO', ascending=False)
         car_abertos = car_abertos.replace('0 / 0', '-')
-        car_abertos = car_abertos.drop(columns=["NULL"])
+        #car_abertos = car_abertos.drop(columns=["NULL"])
         car_abertos = car_abertos[[
             'CARREGAMENTO', 'DESCRICAO', 'PREPARACAO', 'USINAGEM', 'SOLDAGEM', 'PREPARACAO-SUPERFICIE', 'PINTURA',
             'PRE-MONTAGEM', 'ALMOX'
@@ -194,13 +194,21 @@ class BD:
         cur.execute(
             """
             SELECT DISTINCT 
-                TPL.COD_ITEM,  
-                TOR.NUM_ORDEM, 
-                TOR.QTDE,  
-                TIT.DESC_TECNICA 
+                TPL.COD_ITEM, 
+                TOR.NUM_ORDEM,
+                TOR.QTDE, 
+                TIT.DESC_TECNICA,
+                COUNT(CASE 
+                    WHEN NOT EXISTS (
+                        SELECT MOV.ID 
+                        FROM FOCCO3I.TORDENS_MOVTO MOV 
+                        WHERE MOV.TORDEN_ROT_ID = ROT.ID
+                    ) THEN 1 
+                    ELSE NULL 
+                END) AS TOTAL_SEM_MOVIMENTOS
             FROM FOCCO3I.TITENS_PLANEJAMENTO TPL
             INNER JOIN FOCCO3I.TITENS_EMPR EMP      ON TPL.ITEMPR_ID = EMP.ID
-            INNER JOIN FOCCO3I.TITENS TIT           ON EMP.ITEM_ID = TIT.ID  
+            INNER JOIN FOCCO3I.TITENS TIT           ON EMP.ITEM_ID = TIT.ID 
             INNER JOIN FOCCO3I.TORDENS TOR          ON TPL.ID = TOR.ITPL_ID
             INNER JOIN FOCCO3I.TDEMANDAS TDE        ON TOR.ID = TDE.ORDEM_ID
             INNER JOIN FOCCO3I.TORDENS_ROT ROT      ON TOR.ID = ROT.ORDEM_ID
@@ -213,13 +221,26 @@ class BD:
                 INNER JOIN FOCCO3I.TSRENGENHARIA_CARREGAMENTOS CAR  ON VINC.CARERGAM_ID = CAR.ID
                 WHERE CAR.CARREGAMENTO IN (:carregamento)
             )
-            AND TOR.TIPO_ORDEM IN ('OFA', 'OFM')  
             AND MAQ.DESCRICAO IN (:machine)
+            GROUP BY 
+                TPL.COD_ITEM, 
+                TOR.NUM_ORDEM,
+                TOR.QTDE, 
+                TIT.DESC_TECNICA
+            HAVING COUNT(CASE 
+                WHEN NOT EXISTS (
+                    SELECT MOV.ID 
+                    FROM FOCCO3I.TORDENS_MOVTO MOV 
+                    WHERE MOV.TORDEN_ROT_ID = ROT.ID
+                ) THEN 1 
+                ELSE NULL 
+            END) > 0
             """,
             {"carregamento": carregamento, "machine": machine}
         )
         car_data = cur.fetchall()
-        car_data = pd.DataFrame(car_data, columns=['COD_ITEM', 'NUM_ORDEM', 'QTDE', 'DESC_TECNICA'])
+        car_data = pd.DataFrame(car_data, columns=['COD_ITEM', 'NUM_ORDEM', 'QTDE', 'DESC_TECNICA', 'MOVIMENTOS'])
+        car_data = car_data.drop(columns=['MOVIMENTOS'])
         car_data[['COD_ITEM', 'NUM_ORDEM', 'QTDE']] = car_data[['COD_ITEM', 'NUM_ORDEM', 'QTDE']].astype('int64')
 
         return car_data
@@ -240,7 +261,6 @@ class BD:
             {"carregamento": carregamento, "machine": machine}
         )
         lis_maquina = cur.fetchall()
-        print(carregamento, machine, lis_maquina)
         lis_maquina = list(set(lis_maquina[0][0].split(', '))) if lis_maquina and lis_maquina[0][0] else None
         return lis_maquina
 

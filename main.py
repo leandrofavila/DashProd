@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, g
+from flask import Flask, render_template, redirect, url_for, g, request
 import pandas as pd
 from ConDB import BD
 from PlanejamentoSemanal import PLANEJAMENTO
@@ -79,6 +79,11 @@ def update_table():
         df_car_abertos_copy['CARREGAMENTO'] = df_car_abertos_copy['CARREGAMENTO'].apply(
             lambda x: f'<a href="/dashboard/{x}" target="_self" style="text-decoration: none;">{x}</a>'
         )
+        df_car_abertos_copy.insert(0, 'Sel.',
+                                   df_car_abertos_copy['CARREGAMENTO'].apply(
+                                       lambda x: f'<input type="checkbox" class="row-checkbox" >'
+                                   ))
+
         df_car_abertos_copy['DATA_AUX'] = pd.to_datetime(df_car_abertos_copy['DATA_'], errors='coerce')
         df_car_abertos_copy = df_car_abertos_copy.sort_values(by='DATA_AUX')
         df_car_abertos_copy = df_car_abertos_copy.drop(columns=['DATA_AUX'])
@@ -88,7 +93,6 @@ def update_table():
             "PRE-MONTAGEM": "MONTAGEM",
             "DATA_": "DATA"
         }, inplace=True)
-
 
         # Converter para HTML
         table_html = df_car_abertos_copy.to_html(
@@ -184,8 +188,30 @@ def details(machine, carregamento):
         machine=machine,
         cards=final_html,
         message=None,
+        carregamento=carregamento,
         desc_carregamento=desc_carregamento
     )
+
+
+@server.route('/process_selected', methods=['POST'])
+def process_selected():
+    try:
+        data = request.json
+        selected_values = data.get('selected', [])
+        print(selected_values)
+
+        #bd.car_details(machine, carregamento)
+        # Gere o relatório baseado nos valores selecionados
+        #df_report = df_car_abertos[df_car_abertos['CARR.'].isin(selected_values)]
+
+        # Converta o DataFrame para HTML
+        #report_html = df_report.to_html(classes="table", index=False)
+
+        #return jsonify({'report_html': report_html})
+    except Exception as e:
+        pass
+        #return jsonify({'error': str(e)}), 500
+
 
 
 
