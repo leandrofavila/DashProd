@@ -6,72 +6,12 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>Inicio</title>
 </head>
-<style>
-    .table span[title="PRONTO"] {
-        cursor: pointer;
-    }
-    .table span[title="PRONTO"]:hover {
-        font-weight: bold;
-    }
-</style>
 <body>
     <table class="table" id="summary_table">
-        {{ table_summary|safe }}
-        <button type="submit" style="display:none;" id="hidden-submit"></button>
+        {{ table_summary|safe }}        
     </table>
-    <script>
-        document.addEventListener("keypress", function(event) {
-            if (event.key === "Enter") {
-                event.preventDefault(); // Evita o comportamento padrão do Enter
-                const selectedValues = [];
-                document.querySelectorAll(".row-checkbox:checked").forEach(checkbox => {
-                    selectedValues.push(checkbox.value);
-                });
-
-                // Envie os dados via AJAX
-                fetch('/process_selected', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ selected: selectedValues })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    // Mostre o modal com o relatório recebido
-                    showModalWithData(data.report_html);
-                })
-                .catch(err => console.error("Erro ao enviar:", err));
-            }
-        });
-
-        function showModalWithData(reportHTML) {
-            const modal = document.createElement('div');
-            modal.innerHTML = `
-                <div class="modal">
-                    <div class="modal-content">
-                        <span class="close-btn">&times;</span>
-                        ${reportHTML}
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            modal.querySelector('.close-btn').onclick = () => modal.remove();
-        }
-    </script>
-    <script>
-    function sendData(header, rowValue) {
-        // Envia os dados usando fetch para evitar reload de página
-        fetch("/handle_click", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ header: header, row_value: rowValue }),
-        }).then(response => {
-            if (response.ok) {
-                console.log("Data sent successfully!");
-            } else {
-                console.error("Failed to send data.");
-            }
-        });
-    }
-</script>
+    <button type="submit" style="display:none;" id="hidden-submit"></button>
+    <div id="report"></div>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

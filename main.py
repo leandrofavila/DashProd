@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, g, request
+from flask import Flask, render_template, redirect, url_for, g, request, jsonify
 import pandas as pd
 from ConDB import BD
 from PlanejamentoSemanal import PLANEJAMENTO
@@ -7,7 +7,6 @@ import os
 
 
 server = Flask(__name__, static_folder='static')
-
 bd = BD()
 pl_semanal = PLANEJAMENTO()
 
@@ -46,7 +45,7 @@ def style_pdf_cells(value):
 
 def style_cells(value):
     if isinstance(value, str) and value.startswith("0 / "):
-        return f'<div style="background-color: green; border-radius: 6px;" title="PRONTO">FINALIZADO</div>'
+        return f'<div style="background-color: green; border-radius: 6px;">FINALIZADO</div>'
     return value
 
 
@@ -57,7 +56,6 @@ def arranjadas(lis_ordens):
         r"Y:\Cnc\Puncionadeira_Cnc\PDF_Xml", r"Y:\Cnc\Plasma_Cnc\Pdf_Xml", r"Y:\Cnc\Laser\PDF_laser"
     ]]
     return any(os.path.exists(path) for path in folder_paths)
-
 
 
 def style_machine(machine):
@@ -71,20 +69,31 @@ def style_machine(machine):
 def update_table():
     # Adicionando a data de entrega do planejamento semanal a cada carregamento com sit 'A' do Focco
     df_car_abertos = bd.car_abertos()
-    df_pla_semanal = pl_semanal.get_df_pl_semanal()
-    df_car_abertos = pd.merge(df_car_abertos, df_pla_semanal, on='CARREGAMENTO', how='left')
+    dic_pla_semanal = pl_semanal.get_df_pl_semanal()
+    df_car_abertos['DATA_'] = df_car_abertos['CARREGAMENTO']. map(dic_pla_semanal)
 
     try:
         df_car_abertos_copy = df_car_abertos.copy()
+        df_car_abertos_copy.columns.name = None
+        #cria os checkbox
+        df_car_abertos_copy.insert(0, 'Sel.',
+                                   df_car_abertos_copy['CARREGAMENTO'].apply(
+                                       lambda x: f'<input type="checkbox" class="row-checkbox" value="{x}">'
+                                   ))
+
         df_car_abertos_copy['CARREGAMENTO'] = df_car_abertos_copy['CARREGAMENTO'].apply(
             lambda x: f'<a href="/dashboard/{x}" target="_self" style="text-decoration: none;">{x}</a>'
         )
-        df_car_abertos_copy.insert(0, 'Sel.',
-                                   df_car_abertos_copy['CARREGAMENTO'].apply(
-                                       lambda x: f'<input type="checkbox" class="row-checkbox" >'
-                                   ))
 
-        df_car_abertos_copy['DATA_AUX'] = pd.to_datetime(df_car_abertos_copy['DATA_'], errors='coerce')
+        df_car_abertos_copy['DATA_AUX'] = pd.to_datetime(
+            df_car_abertos_copy['DATA_'],
+            format="%d/%m/%Y",
+            errors='coerce'
+        )
+        #df_car_abertos_copy['DATA_AUX'] = df_car_abertos_copy['DATA_AUX'].fillna(df_car_abertos_copy['DATA_'])
+        #print(df_car_abertos_copy.to_string())
+        #dropa os sem data definida problema disso é que existem carregamentos em produção sem data definida
+        #df_car_abertos_copy = df_car_abertos_copy.dropna(subset=['DATA_AUX'])
         df_car_abertos_copy = df_car_abertos_copy.sort_values(by='DATA_AUX')
         df_car_abertos_copy = df_car_abertos_copy.drop(columns=['DATA_AUX'])
         df_car_abertos_copy.rename(columns={
@@ -94,13 +103,13 @@ def update_table():
             "DATA_": "DATA"
         }, inplace=True)
 
-        # Converter para HTML
         table_html = df_car_abertos_copy.to_html(
             classes="table",
             index=False,
             escape=False,
             formatters={col: style_cells for col in df_car_abertos_copy.columns},
         )
+
         return render_template("initial.html", table_summary=table_html)
     except Exception as e:
         return f"Erro ao processar os dados: {str(e)}", 500
@@ -143,7 +152,8 @@ def dashboard(carregamento):
 
 @server.route('/details/<machine>/<carregamento>')
 def details(machine, carregamento):
-    filtered_df = bd.car_details(machine, carregamento)
+    filtered_df = bd.car_details(carregamento, machine)
+    filtered_df = filtered_df.drop(columns=['CARREGAMENTO', 'MAQUINA'])
     desc_carregamento = bd.car_desc(str(carregamento))
 
     if filtered_df.empty:
@@ -197,21 +207,21 @@ def details(machine, carregamento):
 def process_selected():
     try:
         data = request.json
-        selected_values = data.get('selected', [])
-        print(selected_values)
+        selected_carr = data.get('selected', [])
+        df_report = bd.car_details(', '.join(map(str, selected_carr)))
+        unique_machines = df_report['MAQUINA'].unique().tolist()
 
-        #bd.car_details(machine, carregamento)
-        # Gere o relatório baseado nos valores selecionados
-        #df_report = df_car_abertos[df_car_abertos['CARR.'].isin(selected_values)]
+        selected_machines = data.get('selected_machines', [])
+        if not selected_machines:
+            return jsonify({'unique_machines': unique_machines})
 
-        # Converta o DataFrame para HTML
-        #report_html = df_report.to_html(classes="table", index=False)
+        df_report = df_report[df_report['MAQUINA'].isin(selected_machines)]
+        df_report = df_report.sort_values(by=['MAQUINA', 'CARREGAMENTO'])
 
-        #return jsonify({'report_html': report_html})
+        report_html = df_report.to_html(classes="table", index=False)
+        return jsonify({'report_html': report_html})
     except Exception as e:
-        pass
-        #return jsonify({'error': str(e)}), 500
-
+        return jsonify({'error': str(e)}), 500
 
 
 

@@ -2,9 +2,73 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seleção de Carregamentos e Máquinas</title>
+    <script>
+        function handleEnterPress(event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+
+                const selectedCarr = [];
+                document.querySelectorAll(".row-checkbox:checked").forEach(checkbox => {
+                    selectedCarr.push(checkbox.value);
+                });
+
+                const selectedMachines = [];
+                document.querySelectorAll(".machine-checkbox:checked").forEach(checkbox => {
+                    selectedMachines.push(checkbox.value);
+                });
+
+                fetch('/process_selected', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ selected: selectedCarr, selected_machines: selectedMachines })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.report_html) {
+                        document.getElementById("report").innerHTML = data.report_html;
+                    } else if (data.error) {
+                        alert("Erro: " + data.error);
+                    }
+                })
+                .catch(err => console.error("Erro ao enviar:", err));
+            }
+        }
+    </script>
 </head>
 <body>
+    <div>
+        <h3>Selecione os Carregamentos:</h3>
+        <div>
+            {% for carr in carregamentos %}
+            <label>
+                <input type="checkbox" class="row-checkbox" value="{{ carr }}">
+                {{ carr }}
+            </label>
+            {% endfor %}
+        </div>
+    </div>
 
+    <div>
+        <h3>Selecione as Máquinas:</h3>
+        <div>
+            {% for machine in unique_machines %}
+            <label>
+                <input type="checkbox" class="machine-checkbox" value="{{ machine }}">
+                {{ machine }}
+            </label>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div>
+        <h3>Relatório:</h3>
+        <div id="report"></div>
+    </div>
+
+    <script>
+        document.addEventListener("keypress", handleEnterPress);
+    </script>
 </body>
 </html>
