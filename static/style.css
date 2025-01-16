@@ -36,9 +36,12 @@ table th, table td {
 }
 
 .table th {
+    position: sticky;
+    top: 0;
     background-color: #000;
     color: white;
     font-weight: bold;
+    z-index: 2;
 }
 
 table tr:nth-child(odd) {

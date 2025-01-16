@@ -1,14 +1,18 @@
 from flask import Flask, render_template, redirect, url_for, g, request, jsonify
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import pandas as pd
 from ConDB import BD
 from PlanejamentoSemanal import PLANEJAMENTO
 import fitz
 import os
+import time
 
 
 server = Flask(__name__, static_folder='static')
 bd = BD()
 pl_semanal = PLANEJAMENTO()
+
 
 
 @server.route('/')
@@ -63,6 +67,17 @@ def style_machine(machine):
     color = 'green' if status else 'red' if status is not None else 'white'
     return f'<a href="/details/{machine}/{g.carregamento}" target="_self" style="text-decoration: none; color: {color};">{machine}</a>'
 
+
+@server.errorhandler(429)
+def ratelimit_error(e):
+    return jsonify(error="Muitas requisições, menos cliques por favor."), 429
+
+
+limiter = Limiter(
+    get_remote_address,
+    app=server,
+    default_limits=["1 per second"]
+)
 
 
 @server.route('/initial/')
@@ -130,11 +145,16 @@ def dashboard(carregamento):
 
     dic_arranjadas = {'PUNCIONADEIRA': puncionadeira_arranjada, 'LASER': laser_arranjada, 'PLASMA': plasma_arranjada}
     g.dic_arranjadas = dic_arranjadas
+
     # Adicionar link para as máquinas
-    car_data['Maquina'] = car_data['Maquina'].apply(style_machine)
+    try:
+        car_data['Maquina'] = car_data['Maquina'].apply(style_machine)
+    except Exception as erro:
+        return f"Erro: {erro}", 500
 
     # Renderizar a tabela resumida
     car_data = car_data.astype(str)
+    car_data = car_data.sort_values(by=['Abertas / Total'], ascending=False)
     summary_table = car_data.to_html(
         classes="table",
         index=False,
@@ -201,6 +221,7 @@ def details(machine, carregamento):
         carregamento=carregamento,
         desc_carregamento=desc_carregamento
     )
+
 
 
 @server.route('/process_selected', methods=['POST'])

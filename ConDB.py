@@ -159,7 +159,7 @@ class BD:
             r"INNER JOIN FOCCO3I.TSRENG_ORDENS_VINC_CAR VINC      ON TOR.ID = VINC.ORDEM_ID "
             r"INNER JOIN FOCCO3I.TSRENGENHARIA_CARREGAMENTOS CAR  ON VINC.CARERGAM_ID = CAR.ID "
             r"WHERE CAR.CARREGAMENTO IN (" + carregamento + ") "
-                                                            r"GROUP BY MAQ.DESCRICAO "
+            r"GROUP BY MAQ.DESCRICAO "
         )
         car_data = cur.fetchall()
         car_data = pd.DataFrame(car_data, columns=['MAQ', 'TOT_ORDENS', 'TOT_PECAS', 'EM_ABERTO', 'ENCERRADAS'])
@@ -188,6 +188,7 @@ class BD:
         return car_desc
 
     def car_details(self, carregamento, machine=None):
+        #todo -adicionar o almox de destino para o relatório lembrar de remover a coluna para o ultimo dash
         if machine:
             machine = "AND MAQ.DESCRICAO IN (" + ", ".join(f"'{m}'" for m in machine.split(",")) + ") "
         else:
