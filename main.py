@@ -6,13 +6,19 @@ from ConDB import BD
 from PlanejamentoSemanal import PLANEJAMENTO
 import fitz
 import os
-import time
+from jinja2 import Environment, FileSystemLoader
+import win32api
+from weasyprint import HTML
+from datetime import datetime
+import re
+import pickle
 
+TEMP_DIR = "temp_files"
+os.makedirs(TEMP_DIR, exist_ok=True)
 
 server = Flask(__name__, static_folder='static')
 bd = BD()
 pl_semanal = PLANEJAMENTO()
-
 
 
 @server.route('/')
@@ -68,9 +74,19 @@ def style_machine(machine):
     return f'<a href="/details/{machine}/{g.carregamento}" target="_self" style="text-decoration: none; color: {color};">{machine}</a>'
 
 
+def invalid_date(value):
+    if isinstance(value, str):
+        match = re.match(r"(\d{2}).*?(\d{2}/\d{2})", value)
+        if match:
+            _, month = match.groups()
+            new_date = f"{month}/{datetime.now().year}"
+            return pd.to_datetime(new_date, format="%d/%m/%Y", errors='coerce')
+        return value
+    
+
 @server.errorhandler(429)
 def ratelimit_error(e):
-    return jsonify(error="Muitas requisições, menos cliques por favor."), 429
+    return jsonify(error=f"Muitas requisições, menos cliques por favor.{e}"), 429
 
 
 limiter = Limiter(
@@ -82,6 +98,7 @@ limiter = Limiter(
 
 @server.route('/initial/')
 def update_table():
+    #todo - Amanda pediu para adicionar o peso dos itens faltantes
     # Adicionando a data de entrega do planejamento semanal a cada carregamento com sit 'A' do Focco
     df_car_abertos = bd.car_abertos()
     dic_pla_semanal = pl_semanal.get_df_pl_semanal()
@@ -105,10 +122,13 @@ def update_table():
             format="%d/%m/%Y",
             errors='coerce'
         )
-        #df_car_abertos_copy['DATA_AUX'] = df_car_abertos_copy['DATA_AUX'].fillna(df_car_abertos_copy['DATA_'])
-        #print(df_car_abertos_copy.to_string())
-        #dropa os sem data definida problema disso é que existem carregamentos em produção sem data definida
-        #df_car_abertos_copy = df_car_abertos_copy.dropna(subset=['DATA_AUX'])
+
+        #tratando as datas com 'a'
+        df_car_abertos_copy['DATA_AUX'] = df_car_abertos_copy.apply(
+            lambda row: invalid_date(row['DATA_']) if pd.isna(row['DATA_AUX']) else row['DATA_AUX'], axis=1
+        )
+
+
         df_car_abertos_copy = df_car_abertos_copy.sort_values(by='DATA_AUX')
         df_car_abertos_copy = df_car_abertos_copy.drop(columns=['DATA_AUX'])
         df_car_abertos_copy.rename(columns={
@@ -204,6 +224,9 @@ def details(machine, carregamento):
                 <div class="row desc-tecnica">
                     {row['COD_ITEM']} - {row['DESC_TECNICA']}
                 </div>
+                <div class="row desc-tecnica">
+                    Almox destino - {row['ALMOX']}
+                </div>
             </div>
         </div>
         """
@@ -223,7 +246,6 @@ def details(machine, carregamento):
     )
 
 
-
 @server.route('/process_selected', methods=['POST'])
 def process_selected():
     try:
@@ -239,6 +261,10 @@ def process_selected():
         df_report = df_report[df_report['MAQUINA'].isin(selected_machines)]
         df_report = df_report.sort_values(by=['MAQUINA', 'CARREGAMENTO'])
 
+        temp_file_path = os.path.join(TEMP_DIR, f"{selected_carr[0]}_temp.pkl")
+        with open(temp_file_path, 'wb') as temp_file:
+            pickle.dump({'df_report': df_report, 'carregamento': selected_carr}, temp_file)
+
         report_html = df_report.to_html(classes="table", index=False)
         return jsonify({'report_html': report_html})
     except Exception as e:
@@ -246,8 +272,41 @@ def process_selected():
 
 
 
+@server.route('/print-report', methods=['POST'])
+def print_report():
+    try:
+        data = request.json
+        temp_file_path = data.get('temp_file_path')
+
+        with open(temp_file_path, 'rb') as temp_file:
+            temp_data = pickle.load(temp_file)
+
+        df_report = temp_data['df_report']
+        carregamento = temp_data['carregamento']
+        print(df_report)
+
+        env = Environment(loader=FileSystemLoader('.'))
+        template = env.get_template('templates/Rel_PDF.html')
+        html_rel = template.render(rel_final=df_report, desc_car=carregamento,
+                                   carregamento=carregamento)
+
+        with open("html_rel.html", "w") as file:
+            file.write(html_rel)
+
+        HTML('html_rel.html').write_pdf(f"hist/rel_{carregamento}.pdf")
+
+
+        win32api.ShellExecute(0, "print", 'report.pdf', None, ".", 0)
+        print('foi')
+
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
 if __name__ == '__main__':
     try:
-        server.run(host='0.0.0.0', port=8000, debug=True)
+        server.run(host='0.0.0.0', port=8000)
     except Exception as err:
         print(err)
