@@ -98,7 +98,6 @@ limiter = Limiter(
 
 @server.route('/initial/')
 def update_table():
-    #todo - Amanda pediu para adicionar o peso dos itens faltantes
     # Adicionando a data de entrega do planejamento semanal a cada carregamento com sit 'A' do Focco
     df_car_abertos = bd.car_abertos()
     dic_pla_semanal = pl_semanal.get_df_pl_semanal()

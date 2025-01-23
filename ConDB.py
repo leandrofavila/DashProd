@@ -150,6 +150,7 @@ class BD:
             r"    MAQ.DESCRICAO, "
             r"    COUNT(TOR.NUM_ORDEM) AS TOT_ORDENS, "
             r"    SUM(TOR.QTDE) TOT_PECAS, "
+            r"    TO_CHAR(SUM(TDE.QTDE),'FM999G999G990D00') AS PESO_TOT, "
             r"    COUNT(CASE WHEN NOT EXISTS( "
             r"                            SELECT MOV.ID FROM FOCCO3I.TORDENS_MOVTO MOV "
             r"                            WHERE MOV.TORDEN_ROT_ID = ROT.ID "
@@ -161,11 +162,12 @@ class BD:
             r"INNER JOIN FOCCO3I.TMAQUINAS MAQ                    ON FAB.MAQUINA_ID = MAQ.ID "
             r"INNER JOIN FOCCO3I.TSRENG_ORDENS_VINC_CAR VINC      ON TOR.ID = VINC.ORDEM_ID "
             r"INNER JOIN FOCCO3I.TSRENGENHARIA_CARREGAMENTOS CAR  ON VINC.CARERGAM_ID = CAR.ID "
+            r"INNER JOIN FOCCO3I.TDEMANDAS TDE                    ON TDE.ORDEM_ID = TOR.ID "
             r"WHERE CAR.CARREGAMENTO IN (" + carregamento + ") "
             r"GROUP BY MAQ.DESCRICAO "
         )
         car_data = cur.fetchall()
-        car_data = pd.DataFrame(car_data, columns=['MAQ', 'TOT_ORDENS', 'TOT_PECAS', 'EM_ABERTO', 'ENCERRADAS'])
+        car_data = pd.DataFrame(car_data, columns=['MAQ', 'TOT_ORDENS', 'TOT_PECAS', 'PESO_TOT', 'EM_ABERTO', 'ENCERRADAS'])
         car_data[['TOT_ORDENS', 'TOT_PECAS', 'EM_ABERTO', 'ENCERRADAS']] = car_data[[
             'TOT_ORDENS', 'TOT_PECAS', 'EM_ABERTO', 'ENCERRADAS'
         ]].astype('int64')
