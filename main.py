@@ -260,7 +260,7 @@ def process_selected():
         df_report = df_report[df_report['MAQUINA'].isin(selected_machines)]
         df_report = df_report.sort_values(by=['MAQUINA', 'CARREGAMENTO'])
 
-        temp_file_path = os.path.join(TEMP_DIR, f"{selected_carr[0]}_temp.pkl")
+        temp_file_path = os.path.join(TEMP_DIR, "temp.pkl")
         with open(temp_file_path, 'wb') as temp_file:
             pickle.dump({'df_report': df_report, 'carregamento': selected_carr}, temp_file)
 
@@ -273,34 +273,47 @@ def process_selected():
 
 @server.route('/print-report', methods=['POST'])
 def print_report():
-    try:
-        data = request.json
-        temp_file_path = data.get('temp_file_path')
+    temp_file_path = os.path.join(TEMP_DIR, "temp.pkl")
+    if not os.path.exists(temp_file_path):
+        return jsonify({'error': 'Arquivo temporário não encontrado.'}), 404
 
-        with open(temp_file_path, 'rb') as temp_file:
-            temp_data = pickle.load(temp_file)
+    with open(temp_file_path, 'rb') as temp_file:
+        temp_data = pickle.load(temp_file)
 
-        df_report = temp_data['df_report']
-        carregamento = temp_data['carregamento']
-        print(df_report)
+    df_report = temp_data['df_report']
+    carregamento = temp_data['carregamento']
+    df_report.rename(columns={
+        "CARREGAMENTO": "Carr.",
+        "NUM_ORDEM": "Ordem",
+        "COD_ITEM": "Item",
+        "QTDE": "Qtd.",
+        "DESC_TECNICA": "Descrição",
+        "MAQUINA": "Maquina",
+        "ALMOX": "Almox"
+    }, inplace=True)
 
-        env = Environment(loader=FileSystemLoader('.'))
-        template = env.get_template('templates/Rel_PDF.html')
-        html_rel = template.render(rel_final=df_report, desc_car=carregamento,
-                                   carregamento=carregamento)
+    env = Environment(loader=FileSystemLoader('.'))
+    template = env.get_template('templates/Rel_PDF.html')
+    html_rel = template.render(
+        table_summary=df_report.to_html(classes="table", index=False),
+        desc_car=carregamento,
+        carregamento=carregamento
+    )
 
-        with open("html_rel.html", "w") as file:
-            file.write(html_rel)
+    with open("Rel_PDF.html", "w", encoding="utf-8") as file:
+        file.write(html_rel)
 
-        HTML('html_rel.html').write_pdf(f"hist/rel_{carregamento}.pdf")
+    pdf_filename = f"rel_.pdf"
+    HTML('Rel_PDF.html').write_pdf(pdf_filename)
 
+    os.startfile(pdf_filename, 'open')
 
-        win32api.ShellExecute(0, "print", 'report.pdf', None, ".", 0)
-        print('foi')
-
+    if os.path.exists(pdf_filename):
+        win32api.ShellExecute(0, "print", pdf_filename, None, ".", 0)
         return jsonify({'success': True}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    else:
+        return jsonify({'error': 'Falha ao gerar PDF.'}), 500
+
 
 
 

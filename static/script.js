@@ -88,54 +88,45 @@ function showMachinesModal(machines) {
     };
 }
 
-function showReportModal(reportHtml) {
-    modalOpen = true; // Indicar que o modal está aberto
+function showReportModal(reportHtml, tempFilePath) { // 👈 Recebe o caminho como parâmetro
+    modalOpen = true;
     const modal = document.createElement('div');
     modal.className = 'modal';
     modal.innerHTML = `
     <div class="modal-content">
         <h3>Relatório para impressão</h3>
-        <div>
-            ${reportHtml}
-        </div>
+        <div>${reportHtml}</div>
         <button id="close-report-modal">Fechar</button>
         <button id="print-report">Imprimir</button>
     </div>
     `;
     document.body.appendChild(modal);
 
-    // Fechar modal
-    document.getElementById("close-report-modal").onclick = function() {
-        closeModal();
-    };
+    // Armazena o caminho em uma variável acessível
+    window.tempFilePath = tempFilePath; // 👈 Define globalmente
 
-    // Chamar impressão
     document.getElementById("print-report").onclick = function() {
         fetch('/print-report', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ temp_file_path: window.tempFilePath }) // 👈 Usa o caminho
         })
         .then(response => {
-            if (response.ok) {
-                return response.json(); // Processar o JSON retornado
-            } else {
-                throw new Error("Erro ao enviar relatório para impressão.");
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return response.json();
         })
         .then(data => {
             if (data.success) {
                 alert("Relatório enviado para impressão com sucesso.");
-                return true; // Retorna true na ação do clique
             } else {
-                alert("Falha ao imprimir o relatório.");
+                alert("Falha ao imprimir: " + (data.error || "Erro desconhecido"));
             }
         })
         .catch(error => {
-            console.error("Erro na requisição:", error);
-            alert("Ocorreu um erro ao tentar imprimir o relatório.");
+            console.error("Erro:", error);
+            alert("Erro ao imprimir: " + error.message);
         });
     };
-
 }
 
 function closeModal() {

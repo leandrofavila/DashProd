@@ -2,100 +2,92 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" charset="UTF-8">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            font-size: 9pt;
-        }
-        h1 {
-            font-family: 'Arial Narrow', Arial, sans-serif;
-            font-size: 16px;
-            color: black;
-            text-align: center;
-        }
-        td {
-            font-size: 9pt;
-        }
-        @page {
-            margin: 0.2in;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        table, th, td {
-            border: 0.1px solid black;
-        }
-        th, td {
-            padding: 10px;
-            vertical-align: middle;
-            text-align: center;
-            background-color: #f2f2f2;
-        }
-        .left-align {
-            text-align: left;
-        }
-        tr.cab_res {
-            font-size: 13px;
-            text-align: center;
-        }
-    </style>
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Centraliza todo o conteúdo horizontalmente */
+        overflow-x: hidden;
+    }
+
+    .container-tabela {
+        max-width: 900px;
+        width: 100%;
+        margin: 0 auto;
+        padding: 0 10px;
+        box-sizing: border-box;
+    }
+
+    .header-content {
+        text-align: center;
+        width: 100%;
+        max-width: 900px; /* Mesma largura máxima da tabela */
+        padding: 0 10px;
+        box-sizing: border-box;
+        margin-bottom: 20px;
+    }
+
+    .header-content img {
+        display: block; /* Remove espaços fantasmas abaixo da imagem */
+        margin: 0 auto; /* Centraliza a imagem dentro do header-content */
+        max-width: 300px; /* Ajuste conforme necessário */
+        height: auto;
+    }
+
+
+    .table {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        font-size: 10px;
+        margin: 0 auto;
+    }
+
+    .table th, .table td {
+        border: 1px solid #ddd;
+        padding: 4px;
+        word-wrap: break-word; /* Quebra palavras longas */
+    }
+
+    /* Larguras personalizadas para cada coluna */
+    .table th:nth-child(1), .table td:nth-child(1) { width: 6%; }
+    .table th:nth-child(2), .table td:nth-child(2) { width: 8%; }
+    .table th:nth-child(3), .table td:nth-child(3) { width: 8%; }
+    .table th:nth-child(4), .table td:nth-child(4) { width: 5%; }
+    .table th:nth-child(5), .table td:nth-child(5) { width: 45%;
+                                                    white-space: normal;}
+    .table th:nth-child(6), .table td:nth-child(6) { width: 15%; }
+    .table th:nth-child(7), .table td:nth-child(7) { width: 13%; }
+
+    h1 {
+    font-size: 16px;
+    color: #333;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin-bottom: 20px;
+    }
+</style>
     <title>Relatório</title>
 </head>
+<!-- Modifique esta seção do HTML -->
 <body>
-    <center>
-        <a href="https://imgbb.com/"><img src="https://i.ibb.co/z8zhpjf/Grupo-SR-Escuro.png" alt="Grupo-SR-Escuro" border="0"></a>
-        <br><h1>
-            Relat&oacute;rio Embarque Agrupado com Cor
+    <div class="header-content">
+        <a href="https://imgbb.com/">
+            <img src="https://i.ibb.co/z8zhpjf/Grupo-SR-Escuro.png" alt="Grupo-SR-Escuro">
+        </a>
+        <h1>
+            Relatório ordens por fazer agrupado por máquinas e carregamentos ({{ carregamento|join(', ') }})
         </h1>
-        <br> {{ desc_car }} -  CARREGAMENTO - {{ carregamento }} <br><br>
-    </center>
-    <table>
-        <thead>
-            <tr>
-                <th>Cod. Item</th>
-                <th>Desc. Tecnica</th>
-                <th>Qtd</th>
-                <th>Cor</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for index, row in rel_final.iterrows() %}
-                <tr>
-                    <td>{{ row['COD_ITEM'] }}</td>
-                    <td class="left-align">{{ row['DESC_TECNICA_x'] }}</td>
-                    <td>{{ row['QTDE'] }}</td>
-                    <td>{{ row['COR'] }}</td>
-                </tr>
-                    <tr>
-                        {% if row['DESC_TECNICA_y'] != '' %}
-                        <td class="left-align" colspan="4">&emsp; <span style='font-size:24px;'>&#8627;</span>
-                            {% if row['QTDE_RODADA_x'] == 0 %}
-                                Este item N&Atilde;O possui ordem no carregamento.</td>
-                            {% else %}
-                                Este item possui ordem para {{ row['QTDE_RODADA_x'] }}
-                                                                                 {% if row['QTDE_RODADA_x'] == 1 %}
-                                                                                     pe&ccedil;a  no carregamento.</td>
-                                                                                 {% else %}
-                                                                                     pe&ccedil;as  no carregamento.</td>
-                                                                                 {% endif %}
-                            {% endif %}
-                        {% endif %}
+    </div>
 
-                        {% if row['cod_semelhante'] != '' %}
-                        <td class="left-align" colspan="4">&emsp; <span style='font-size:24px;'>&#8627;</span>
-                            Para este item, favor avaliar se &eacute; poss&iacute;vel utilizar o item
-                            {{ row['cod_semelhante'] }} no seu lugar. </td>
-                        {% endif %}
-
-                        {% if row['MASCARA'] != '' %}
-                        <td class="left-align" colspan="4">&emsp; <span style='font-size:24px;'>&#8627;</span> Para este
-                            item, existe outro com mesmo c&oacute;digo e mascara {{ row['MASCARA'] }} em saldo, se poss&iacute;vel usa-lo.</td>
-                        {% endif %}
-                    </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="container-tabela">
+        <table class="table">
+            {{ table_summary|safe }}
+        </table>
+    </div>
 </body>
 </html>
