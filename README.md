@@ -7,4 +7,5 @@ A dashboard showing the progress of production for subgroups of manufacturing or
 
 ![FoccoRecorder_5AD94565-21D1-47A4-9A37-8DF5073B086C-ezgif com-video-to-gif-converter](https://github.com/user-attachments/assets/3e8aa4fb-b5e9-46e5-9f8a-22a19d37b753)
 
-[rel_.pdf](https://github.com/user-attachments/files/18647478/rel_.pdf)
+
+![Capturar](https://github.com/user-attachments/assets/778178ef-6603-4cca-b42a-ad899f831612)
